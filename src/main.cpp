@@ -31,11 +31,11 @@ DHT dht(DHTPIN, DHTTYPE);
 float min2 = 100;  //temperatura min si no se igual a 100 se va a 0
 float max2;  //temperatura maxima
 
-int node;
+String name;
 float temp, hum , tmin, tmax;
 
 //Number for this node
-int nodeNumber = 1;
+String nameNodo = "HGO CTI 4° PISO";  // ***************************************modificar cada vez que se programe
 /** 1 es Com
  *  2 es CTI
  *  3 es PMCT
@@ -99,7 +99,7 @@ Task taskSendMessage(TASK_SECOND * 5 , TASK_FOREVER, &sendMessage);
 // obtiene lecturas de temperatura, humedad etc y devuelve un String con los datos obtenidos de este mismo nodo
 String getReadings () {
   String readings;
-  jsonReadings["node"] = nodeNumber;
+  jsonReadings["name"] = nameNodo;
   jsonReadings["temp"] = dht.readTemperature();
   jsonReadings["hum"] = dht.readHumidity();
   jsonReadings["tmin"] = tempMin();
@@ -122,17 +122,17 @@ void receivedCallback( uint32_t from, String &msg ) {
   Serial.printf("Received from %u msg=%s\n", from, msg.c_str());
   //deserializeJson() funcion que deserealiza en este caso msg y lo vuelve un objeto llamado myObject y arroja un error
   DeserializationError error = deserializeJson(myObject,msg);
-  Serial.print("[INFO main.cpp] ");
+  Serial.print("[INFO main.cpp] Deserealizacion -> ");
   Serial.println(error.c_str());
   if(error == DeserializationError::Ok){
-    node = myObject["node"];
+    name = myObject["name"].as<String>();
     temp = myObject["temp"];
     hum = myObject["hum"];
     tmin = myObject["tmin"];
     tmax = myObject["tmax"];
   }
-    Serial.print("Node: ");
-    Serial.println(node);
+    Serial.print("nombre del nodo: ");
+    Serial.println(name);
     Serial.print("Temperature: ");
     Serial.print(temp);
     Serial.println(" C");
@@ -149,7 +149,7 @@ void receivedCallback( uint32_t from, String &msg ) {
 }
 /*La función se ejecuta cada vez que un nuevo nodo se une a la red. Esta función simplemente imprime la identificación 
   del chip del nuevo nodo. Puede modificar la función para realizar cualquier otra tarea.*/
-void newConnectionCallback(uint32_t nodeId) {
+void newConnectionCallback(uint32_t nodeId) { //parece ser un control interno del protocolo mesh
   Serial.printf("New Connection, nodeId = %u\n", nodeId);
   //podriamos agregar un pitido doble
 }
