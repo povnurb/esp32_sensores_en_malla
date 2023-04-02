@@ -11,21 +11,14 @@
 #include <WiFi.h>
 #include <Adafruit_I2CDevice.h> //se pondran al final para ver si no causan conflicto
 #include <Adafruit_SSD1306.h>
+#include "globales.hpp"
 // MESH Details
-#define   MESH_PREFIX     "CTRLHGO" //nombre de la red malla
-#define   MESH_PASSWORD   "Personal" //password de la red malla
+
 #define   MESH_PORT       5555 //default port
 
 // Digital pin connected to the DHT sensor
-#define DHTPIN 2  
-#define SENDOK 12                                      //GPIO12 envio ok
-#define SENDFAIL 15                                     //GPIO15 fallo el envio
-#define Interrupcion 35 
-#define tiempoDeRebote 250      
-// Uncomment the type of sensor in use:
-//#define DHTTYPE    DHT11     // DHT 11
-#define DHTTYPE    DHT22     // DHT 22 (AM2302)
-//#define DHTTYPE    DHT21     // DHT 21 (AM2301)
+
+
 
 DHT dht(DHTPIN, DHTTYPE);
 float min2 = 100;  //temperatura min si no se igual a 100 se va a 0
@@ -33,13 +26,14 @@ float max2;  //temperatura maxima
 
 String name;
 float temp, hum , tmin, tmax;
-
 //Number for this node
-String nameNodo = "HGO CTI 4° PISO";  // ***************************************modificar cada vez que se programe
-/** 1 es Com
- *  2 es CTI
- *  3 es PMCT
- *  4 es PTTI2
+int nId; //numero de identificador de los demas nodos
+int id = 1; //numero de identificador de este nodo
+String nameNodo = "HGO PMCT 4° PISO";  // ***************************************modificar cada vez que se programe
+/** 1 es PMCT
+ *  2 es CTI -ocupado
+ *  3 es COM -ocupado
+ *  4 es PTTI2 -ocupado
  *  5 es PTTI
 */
 
@@ -99,6 +93,7 @@ Task taskSendMessage(TASK_SECOND * 5 , TASK_FOREVER, &sendMessage);
 // obtiene lecturas de temperatura, humedad etc y devuelve un String con los datos obtenidos de este mismo nodo
 String getReadings () {
   String readings;
+  jsonReadings["nId"] = id;
   jsonReadings["name"] = nameNodo;
   jsonReadings["temp"] = dht.readTemperature();
   jsonReadings["hum"] = dht.readHumidity();
@@ -125,12 +120,15 @@ void receivedCallback( uint32_t from, String &msg ) {
   Serial.print("[INFO main.cpp] Deserealizacion -> ");
   Serial.println(error.c_str());
   if(error == DeserializationError::Ok){
+    nId = myObject["nId"];
     name = myObject["name"].as<String>();
     temp = myObject["temp"];
     hum = myObject["hum"];
     tmin = myObject["tmin"];
     tmax = myObject["tmax"];
-  }
+  } 
+    Serial.print("nId: ");
+    Serial.println(nId);
     Serial.print("nombre del nodo: ");
     Serial.println(name);
     Serial.print("Temperature: ");
