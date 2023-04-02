@@ -1,3 +1,8 @@
+/**
+ * 1 .- agregrar un servidor y se conecte a un red wifi
+ * 2 .- funcione de manera AP
+ * 3 .- que en lugar de numero se identifique el nodo con letras
+*/
 #include <Arduino.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
@@ -151,7 +156,7 @@ void newConnectionCallback(uint32_t nodeId) {
 /*La función se ejecuta cada vez que cambia una conexión en la red (cuando un nodo se une o sale de la red)*/
 void changedConnectionCallback() {
   Serial.printf("Changed connections\n");
-  //podriamos agregar un pitido simple
+  //podriamos agregar un pitido simple o modicar o adquirir informacion adicional para ampliar
 }
 
 //La función se ejecuta cuando la red ajusta la hora, de modo que todos los nodos estén sincronizados. Imprime el desplazamiento.
