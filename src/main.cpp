@@ -1,5 +1,6 @@
 /**https://github.com/gmag11/painlessMesh
  * 1 .- agregar el protocolo ESP_NOW a esta malla (protocolo MESH)
+ * este sketch es complemento de protocolo_esp_Now que hara de servidor
 */
 
 /*
@@ -36,7 +37,8 @@ a un nodo individual identificado por su `nodeId.
 #include <Adafruit_I2CDevice.h> //se pondran al final para ver si no causan conflicto
 #include <Adafruit_SSD1306.h>
 #include "globales.hpp"
-
+#include <esp_now.h>
+#include <esp_wifi.h>
 // MESH Details
 
 #define   MESH_PORT       5555 //default port
@@ -47,18 +49,69 @@ DHT dht(DHTPIN, DHTTYPE);
 float min2 = 100;  //temperatura min si no se igual a 100 se va a 0
 float max2;  //temperatura maxima
 
+//****************************************************************************************
+//MAC Address of the receiver osea de el dispositivo que recibe 
+uint8_t broadcastAddress[] = {0x40, 0x22, 0xD8, 0x04, 0x36, 0x4C};
+// Insert your SSID
+constexpr char WIFI_SSID[] = "CTRLHGO"; // "INFINITUM37032"//INFINITUM59W1_2.4//INFINITUMD378
+//Structure example to send data
+//Must match the receiver structure
+typedef struct struct_message {
+    int id;
+    String nameNodo;
+    float temp;
+    float hum;
+    float readingId;
+    float min;
+    float max;
+} struct_message;
+
+//Create a struct_message called myData
+struct_message myData; //envio por esp-NOW
+struct_message myData2; //envio por la malla
+unsigned long previousMillis = 0;   // Stores last time temperature was published
+const long interval = 5000;        // Interval at which to publish sensor readings
+
+int32_t getWiFiChannel(const char *ssid) {
+  if (int32_t n = WiFi.scanNetworks()) {
+      for (uint8_t i=0; i<n; i++) {
+          if (!strcmp(ssid, WiFi.SSID(i).c_str())) {
+              return WiFi.channel(i);
+          }
+      }
+  }
+  return 0;
+}
+float getWiFiRsi(const char *ssid2) {
+  if (int32_t n = WiFi.scanNetworks()) {
+      for (uint8_t i=0; i<n; i++) {
+          if (!strcmp(ssid2, WiFi.SSID(i).c_str())) {
+            Serial.println(WiFi.RSSI(i));
+            return WiFi.RSSI(i);
+          }
+      }
+  }
+  return 0;
+}
+// callback when data is sent
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+//*************************************************************************
+
 String name;
-float temp, hum , tmin, tmax;
+float temp, hum , tmin, tmax, readingId;
 //Number for this node
 int nId; //numero de identificador de los demas nodos
-int id = 2; //numero de identificador de este nodo
-String nameNodo = "HGO CTI 4° PISO";  // ***************************************modificar cada vez que se programe
-
-/** 1 es PMCT
- *  2 es CTI -ocupado
- *  3 es COM -ocupado
- *  4 es PTTI2 -ocupado
- *  5 es PTTI
+int id = 4; //numero de identificador de este nodo--------sustituye a board
+String nameNodo = "PTTI HGO";  // ***************************************modificar cada vez que se programe
+bool espnow = false;
+/** 
+ *  1 es "CTIHGO" 
+ *  2 es PMCT
+ *  3 es PTTI2 -ocupado
+ *  4 es PTTI -ocupado
 */
 
 //String to send to other nodes with sensor readings
@@ -70,8 +123,9 @@ painlessMesh  mesh;
 // User stub
 void sendMessage() ; // Prototype so PlatformIO doesn't complain
 String getReadings(); // Prototype for sending sensor readings
-StaticJsonDocument<220> jsonReadings; //lecturas de este mismo nodo
-StaticJsonDocument<249> myObject;
+StaticJsonDocument<500> jsonReadings; //lecturas de este mismo nodo
+StaticJsonDocument<500> myObject;
+StaticJsonDocument<500> jsonSendMesh; //envio por mesh
 //funciones para saber la temperatura min y maximas
 float readDHTTemperature2() {
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -120,11 +174,14 @@ String getReadings () {
   jsonReadings["nId"] = id;
   jsonReadings["name"] = nameNodo;
   jsonReadings["temp"] = dht.readTemperature();
+  jsonReadings["readingId"] = myData.readingId; 
   jsonReadings["hum"] = dht.readHumidity();
   jsonReadings["tmin"] = tempMin();
   jsonReadings["tmax"] = tempMax();
   //La variable se convierten luego en String y se guardan es una variable llamada readings
   serializeJson(jsonReadings,readings);
+  Serial.println("Informacion a enviar por la Malla");
+  Serial.println(readings); //si lo quito falla el string
   return readings;
 }
 // funcion envia el mensaje por mesh osea a todos los nodos de la red (difusión).
@@ -147,10 +204,12 @@ void receivedCallback( uint32_t from, String &msg ) {
     nId = myObject["nId"];
     name = myObject["name"].as<String>();
     temp = myObject["temp"];
+    readingId = myObject["readingId"];
     hum = myObject["hum"];
     tmin = myObject["tmin"];
     tmax = myObject["tmax"];
   } 
+    Serial.println("Informacion recivida por la malla:");
     Serial.print("nId: ");
     Serial.println(nId);
     Serial.print("nombre del nodo: ");
@@ -158,6 +217,8 @@ void receivedCallback( uint32_t from, String &msg ) {
     Serial.print("Temperature: ");
     Serial.print(temp);
     Serial.println(" C");
+    Serial.print("potencia: ");
+    Serial.print(readingId);
     Serial.print("Temperature Min: ");
     Serial.print(tmin);
     Serial.println(" C");
@@ -167,7 +228,30 @@ void receivedCallback( uint32_t from, String &msg ) {
     Serial.print("Humidity: ");
     Serial.print(hum);
     Serial.println(" %");
-  
+  //hay que serealizar el objeto para enviar a la malla
+
+    myData2.id = nId;//BOARD_ID;
+    myData2.nameNodo = name;
+    myData2.temp = temp;
+    myData2.hum = hum;
+    myData2.readingId = readingId; //readingId++; //-------------------------------------------------------------
+    myData2.min = tmin;
+    myData2.max = tmax;
+
+  //Send message via ESP-NOW al esclavo
+    esp_err_t result2 = esp_now_send(broadcastAddress, (uint8_t *) &myData2, sizeof(myData2));
+    if (result2 == ESP_OK) {
+      Serial.println("Sent with success por espnow al servidor");
+      Serial.println(myData2.id);
+      Serial.println(myData2.nameNodo);
+      digitalWrite(SENDOK, HIGH);
+    }
+    else {
+      Serial.println("Error sending the data por espnow al servidor");
+      Serial.println(myData2.id);
+      Serial.println(myData2.nameNodo);
+      digitalWrite(SENDOK, LOW);
+    }
 }
 /*La función se ejecuta cada vez que un nuevo nodo se une a la red. Esta función simplemente imprime la identificación 
   del chip del nuevo nodo. Puede modificar la función para realizar cualquier otra tarea.*/
@@ -190,6 +274,38 @@ void setup() {
   Serial.begin(115200);
   
   dht.begin();
+  WiFi.mode(WIFI_AP_STA);//ver si jala sin esto
+
+  int32_t channel = getWiFiChannel(WIFI_SSID); //obtenemos el canal
+
+  WiFi.printDiag(Serial); // Uncomment to verify channel number before
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
+  WiFi.printDiag(Serial); // Uncomment to verify channel change after
+
+  //Init ESP-NOW
+  if (!esp_now_init()) {
+    //si el resultado es un 0 la conexion ESP-NOW esta ok
+    Serial.println("[INFO: espnow.hpp ] Conexion ESP-NOW inicializada.");
+  }else{
+    Serial.println("[INFO: espnow.hpp ] Conexion ESP-NOW no inicializada.");
+    ESP.restart();
+  }
+
+  // Once ESPNow is successfully Init, we will register for Send CB to
+  // get the status of Trasnmitted packet
+  esp_now_register_send_cb(OnDataSent);
+  esp_now_peer_info_t peerInfo;
+  memset(&peerInfo, 0, sizeof(peerInfo)); //si no quitar y encontrar la version 1.0.6
+  memcpy(peerInfo.peer_addr, broadcastAddress, sizeof(peerInfo.peer_addr));
+  peerInfo.encrypt = false;
+  
+  //Add peer        
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    //return;   //se quito
+  }
 
 
   //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
@@ -197,7 +313,7 @@ void setup() {
   mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
 
   //Inicialice la malla con los detalles definidos anteriormente.
-  mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler );
+  mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler ,MESH_PORT);
 
   //Asigne todas las funciones de devolución de llamada a sus eventos correspondientes.
   mesh.onReceive(&receivedCallback);
@@ -216,6 +332,33 @@ void setup() {
 }
 
 void loop() {
-  // it will run the user scheduler as well
+  if(espnow){
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      // Save the last time a new reading was published
+      previousMillis = currentMillis;
+      //Set values to send
+      myData.id = id;//BOARD_ID;
+      myData.nameNodo = nameNodo;
+      myData.temp = dht.readTemperature();
+      myData.hum = dht.readHumidity();
+      myData.readingId = getWiFiRsi(WIFI_SSID); 
+      myData.min = tempMin();
+      myData.max = tempMax();
+      //Send message via ESP-NOW
+
+      esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+      if (result == ESP_OK) {
+        Serial.println("Sent with success ESPNOW");
+        digitalWrite(SENDOK, HIGH);
+        
+      }
+      else {
+        Serial.println("Error sending the data ESPNOW");
+        digitalWrite(SENDOK, LOW);
+        
+      }
+    }
+  }
   mesh.update();
 }
