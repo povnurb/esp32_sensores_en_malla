@@ -1,7 +1,31 @@
-/**
- * 1 .- agregrar un servidor y se conecte a un red wifi
- * 2 .- funcione de manera AP
- * 3 .- que en lugar de numero se identifique el nodo con letras
+/**https://github.com/gmag11/painlessMesh
+ * 1 .- agregar el protocolo ESP_NOW a esta malla (protocolo MESH)
+*/
+
+/*
+Introducción a PainlessMesh
+painlessMesh es una biblioteca que se ocupa de los detalles de la creación de una red de malla simple utilizando hardware esp8266 y esp32. 
+El objetivo es permitir que el programador trabaje con una red de malla sin tener que preocuparse por cómo se estructura o administra la red.
+
+Verdaderas redes ad-hoc
+painlessMesh es una verdadera red ad-hoc, lo que significa que no se requiere planificación, 
+controlador central o enrutador. Cualquier sistema de 1 o más nodos se autoorganizará en una malla 
+completamente funcional. El tamaño máximo de la malla está limitado (creemos) por la cantidad de memoria 
+en el montón que se puede asignar al búfer de subconexiones y, por lo tanto, debería ser bastante alto.
+
+Wi-Fi y redes
+painlessMesh está diseñado para usarse con Arduino, pero no usa las bibliotecas WiFi de Arduino, 
+ya que teníamos problemas de rendimiento (principalmente latencia) con ellas. 
+Más bien, la red se realiza utilizando las bibliotecas SDK nativas esp32 y esp8266, 
+que están disponibles a través del IDE de Arduino. Sin embargo, con suerte, 
+las bibliotecas de red que se utilizan no importarán mucho a la mayoría de los usuarios, 
+ya que solo puede incluir painlessMesh.h, ejecutar init() y luego trabajar con la biblioteca a través de la API.
+
+painlessMesh no es una red IP
+painlessMesh no crea una red TCP/IP de nodos. Más bien, cada uno de los nodos se identifica de forma única por 
+su chipId de 32 bits que se recupera del esp8266/esp32 mediante la system_get_chip_id()llamada en el SDK. Cada 
+nodo tendrá un número único. Los mensajes pueden transmitirse a todos los nodos de la malla o enviarse específicamente 
+a un nodo individual identificado por su `nodeId.
 */
 #include <Arduino.h>
 #include <Adafruit_Sensor.h>
@@ -12,13 +36,12 @@
 #include <Adafruit_I2CDevice.h> //se pondran al final para ver si no causan conflicto
 #include <Adafruit_SSD1306.h>
 #include "globales.hpp"
+
 // MESH Details
 
 #define   MESH_PORT       5555 //default port
 
 // Digital pin connected to the DHT sensor
-
-
 
 DHT dht(DHTPIN, DHTTYPE);
 float min2 = 100;  //temperatura min si no se igual a 100 se va a 0
@@ -28,8 +51,9 @@ String name;
 float temp, hum , tmin, tmax;
 //Number for this node
 int nId; //numero de identificador de los demas nodos
-int id = 1; //numero de identificador de este nodo
-String nameNodo = "HGO PMCT 4° PISO";  // ***************************************modificar cada vez que se programe
+int id = 2; //numero de identificador de este nodo
+String nameNodo = "HGO CTI 4° PISO";  // ***************************************modificar cada vez que se programe
+
 /** 1 es PMCT
  *  2 es CTI -ocupado
  *  3 es COM -ocupado
@@ -167,19 +191,23 @@ void setup() {
   
   dht.begin();
 
+
   //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
   /*Elija los tipos de mensajes de depuración deseados:*/
   mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
 
   //Inicialice la malla con los detalles definidos anteriormente.
-  mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT );
+  mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler );
 
   //Asigne todas las funciones de devolución de llamada a sus eventos correspondientes.
   mesh.onReceive(&receivedCallback);
   mesh.onNewConnection(&newConnectionCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
   mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
-
+  
+  mesh.initStation();
+  Serial.println(mesh.getAPIP());
+  Serial.println(mesh.getStationIP());
   // userScheduler es responsable de manejar y ejecutar las tareas en el momento adecuado.
   userScheduler.addTask(taskSendMessage);
 
