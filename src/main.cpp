@@ -1,6 +1,8 @@
 /**https://github.com/gmag11/painlessMesh
- * 1 .- agregar el protocolo ESP_NOW a esta malla (protocolo MESH)
+ * 1 .- optimizar el programa de tal manera que si se envia por el protocolo esp-now ya no se envie por la malla
  * este sketch es complemento de protocolo_esp_Now que hara de servidor
+ * 2.- cambiar el puerto del dht22
+ * 3.- cambiar la potencia de float a int
 */
 
 /*
@@ -51,8 +53,8 @@ float max2;  //temperatura maxima
 
 //****************************************************************************************
 //MAC Address of the receiver osea de el dispositivo que recibe 
-uint8_t broadcastAddress[] = {0x40, 0x22, 0xD8, 0x04, 0x36, 0x4C};
-// Insert your SSID
+uint8_t broadcastAddress[] = {0x70,0xB8,0xF6,0x5A,0xF1,0x1C};
+// Insert your SSID  //0x70,0xB8,0xF6,0x5A,0xF1,0x1C  //40:22:D8:04:36:4C
 constexpr char WIFI_SSID[] = "CTRLHGO"; // "INFINITUM37032"//INFINITUM59W1_2.4//INFINITUMD378
 //Structure example to send data
 //Must match the receiver structure
@@ -104,14 +106,14 @@ String name;
 float temp, hum , tmin, tmax, readingId;
 //Number for this node
 int nId; //numero de identificador de los demas nodos
-int id = 4; //numero de identificador de este nodo--------sustituye a board
-String nameNodo = "PTTI HGO";  // ***************************************modificar cada vez que se programe
-bool espnow = false;
+int id = 1; //numero de identificador de este nodo--------sustituye a board
+String nameNodo = "CTIHGO";  // ***************************************modificar cada vez que se programe
+bool espnow = true; //envio por espnow
 /** 
- *  1 es "CTIHGO" 
- *  2 es PMCT
+ *  1 es CTIHGO -ocupado
+ *  2 es PMCT -ocupado
  *  3 es PTTI2 -ocupado
- *  4 es PTTI -ocupado
+ *  4 es PTTI 
 */
 
 //String to send to other nodes with sensor readings
@@ -186,8 +188,10 @@ String getReadings () {
 }
 // funcion envia el mensaje por mesh osea a todos los nodos de la red (difusión).
 void sendMessage () {
+
   String msg = getReadings();
   mesh.sendBroadcast(msg);
+  
 }
 
 
@@ -332,9 +336,10 @@ void setup() {
 }
 
 void loop() {
-  if(espnow){
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
+  
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    if(espnow){
       // Save the last time a new reading was published
       previousMillis = currentMillis;
       //Set values to send
