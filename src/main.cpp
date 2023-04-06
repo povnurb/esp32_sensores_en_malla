@@ -32,7 +32,7 @@ a un nodo individual identificado por su `nodeId.
 */
 #include <Arduino.h>
 #include <Adafruit_Sensor.h>
-#include <DHT.h>
+#include "temperatura.hpp"
 #include "painlessMesh.h"
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -46,10 +46,6 @@ a un nodo individual identificado por su `nodeId.
 #define   MESH_PORT       5555 //default port
 
 // Digital pin connected to the DHT sensor
-
-DHT dht(DHTPIN, DHTTYPE);
-float min2 = 100;  //temperatura min si no se igual a 100 se va a 0
-float max2;  //temperatura maxima
 
 //****************************************************************************************
 //MAC Address of the receiver osea de el dispositivo que recibe 
@@ -103,7 +99,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 //*************************************************************************
 
 String name;
-float temp, hum , tmin, tmax, readingId;
+float readingId;
 //Number for this node
 int nId; //numero de identificador de los demas nodos
 int id = 1; //numero de identificador de este nodo--------sustituye a board
@@ -129,43 +125,6 @@ StaticJsonDocument<500> jsonReadings; //lecturas de este mismo nodo
 StaticJsonDocument<500> myObject;
 StaticJsonDocument<500> jsonSendMesh; //envio por mesh
 //funciones para saber la temperatura min y maximas
-float readDHTTemperature2() {
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  // Read temperature as Celsius (the default)
-  float t2 = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  //float t = dht.readTemperature(true);
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(t2)) {    
-    Serial.println("Failed to read from DHT sensor!");
-    return 500;
-  }
-  else {
-    Serial.println(t2);
-    return t2;
-  }
-}
-float tempMin(){
-  
-  float min = readDHTTemperature2();
-  if(min < min2){
-    min2 = min;
-  }else if(min == 0){
-    min2 = readDHTTemperature2();
-  }
-  Serial.println(min2);
-  return min2;
-}
-  
-float tempMax(){
-  
-  float max = dht.readTemperature();
-  if(max > max2){
-    max2 = max;
-  }
-  Serial.println(max2);
-  return max2;
-}
 //Create tasks: to send messages and get readings;
 /**Crea una Task taskSendMessage es una funcion responsable de llamar a
  * sendMessage() cada cinco segundos mientras el programa se está ejecutando.*/
