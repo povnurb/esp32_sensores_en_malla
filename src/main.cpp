@@ -55,11 +55,12 @@ constexpr char WIFI_SSID[] = "CTRLHGO"; // "INFINITUM37032"//INFINITUM59W1_2.4//
 //Structure example to send data
 //Must match the receiver structure
 typedef struct struct_message {
+    String modoSend;
     int id;
     String nameNodo;
     float temp;
     float hum;
-    float readingId;
+    int readingId;
     float min;
     float max;
 } struct_message;
@@ -97,9 +98,9 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 //*************************************************************************
-
+String modoSend;
 String name;
-float readingId;
+int readingId;
 //Number for this node
 int nId; //numero de identificador de los demas nodos
 int id = 1; //numero de identificador de este nodo--------sustituye a board
@@ -132,6 +133,7 @@ Task taskSendMessage(TASK_SECOND * 5 , TASK_FOREVER, &sendMessage);
 // obtiene lecturas de temperatura, humedad etc y devuelve un String con los datos obtenidos de este mismo nodo
 String getReadings () {
   String readings;
+  jsonReadings["modoSend"] = "MESH";
   jsonReadings["nId"] = id;
   jsonReadings["name"] = nameNodo;
   jsonReadings["temp"] = dht.readTemperature();
@@ -164,6 +166,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   Serial.print("[INFO main.cpp] Deserealizacion -> ");
   Serial.println(error.c_str());
   if(error == DeserializationError::Ok){
+    modoSend = myObject["modoSend"].as<String>();
     nId = myObject["nId"];
     name = myObject["name"].as<String>();
     temp = myObject["temp"];
@@ -173,6 +176,8 @@ void receivedCallback( uint32_t from, String &msg ) {
     tmax = myObject["tmax"];
   } 
     Serial.println("Informacion recivida por la malla:");
+    Serial.print("modo: ");
+    Serial.println(modoSend);
     Serial.print("nId: ");
     Serial.println(nId);
     Serial.print("nombre del nodo: ");
@@ -181,7 +186,7 @@ void receivedCallback( uint32_t from, String &msg ) {
     Serial.print(temp);
     Serial.println(" C");
     Serial.print("potencia: ");
-    Serial.print(readingId);
+    Serial.println(readingId);
     Serial.print("Temperature Min: ");
     Serial.print(tmin);
     Serial.println(" C");
@@ -192,7 +197,7 @@ void receivedCallback( uint32_t from, String &msg ) {
     Serial.print(hum);
     Serial.println(" %");
   //hay que serealizar el objeto para enviar a la malla
-
+    myData2.modoSend = "MESH";
     myData2.id = nId;//BOARD_ID;
     myData2.nameNodo = name;
     myData2.temp = temp;
@@ -302,6 +307,7 @@ void loop() {
       // Save the last time a new reading was published
       previousMillis = currentMillis;
       //Set values to send
+      myData.modoSend = "ESPNOW";
       myData.id = id;//BOARD_ID;
       myData.nameNodo = nameNodo;
       myData.temp = dht.readTemperature();
