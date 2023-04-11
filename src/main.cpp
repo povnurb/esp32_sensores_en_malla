@@ -49,10 +49,12 @@ a un nodo individual identificado por su `nodeId.
 
 //****************************************************************************************
 //MAC Address of the receiver osea de el dispositivo que recibe 
-uint8_t broadcastAddress[] = {0x70,0xB8,0xF6,0x5A,0xF1,0x1C};
-// Insert your SSID  //0x70,0xB8,0xF6,0x5A,0xF1,0x1C  //40:22:D8:04:36:4C
-constexpr char WIFI_SSID[] = "CTRLHGO"; // "INFINITUM37032"//INFINITUM59W1_2.4//INFINITUMD378
+constexpr char WIFI_SSID[] = "ESPWROOM32A11B5AE04002"; // "INFINITUM37032"//INFINITUM59W1_2.4//INFINITUMD378
 //Structure example to send data
+uint8_t broadcastAddress[] = {0xE0,0x5A,0x1B,0xA1,0x02,0x40};//E0:5A:1B:A1:02:40
+// Insert your SSID  //0x70,0xB8,0xF6,0x5A,0xF1,0x1C  //40:22:D8:04:36:4C
+//0xE0,0x5A,0x1B,0xA1,0x02,0x40
+//ESPWROOM32A11B5AE04002
 //Must match the receiver structure
 typedef struct struct_message {
     String modoSend;
