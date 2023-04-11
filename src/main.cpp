@@ -103,14 +103,14 @@ String name;
 int readingId;
 //Number for this node
 int nId; //numero de identificador de los demas nodos
-int id = 1; //numero de identificador de este nodo--------sustituye a board
-String nameNodo = "CTIHGO";  // ***************************************modificar cada vez que se programe
+int id = 4; //numero de identificador de este nodo--------sustituye a board
+String nameNodo = "PTTIHGO";  // ***************************************modificar cada vez que se programe
 bool espnow = true; //envio por espnow
 /** 
- *  1 es CTIHGO -ocupado
- *  2 es PMCT -ocupado
+ *  1 es CTIHGO 
+ *  2 es PMCT 
  *  3 es PTTI2 -ocupado
- *  4 es PTTI 
+ *  4 es PTTI -ocupado
 */
 
 //String to send to other nodes with sensor readings
