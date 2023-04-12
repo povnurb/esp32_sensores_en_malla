@@ -48,9 +48,10 @@ a un nodo individual identificado por su `nodeId.
 // Digital pin connected to the DHT sensor
 
 //****************************************************************************************
-//MAC Address of the receiver osea de el dispositivo que recibe 
+//red donde tomara el canal y la potencia
 constexpr char WIFI_SSID[] = "ESPWROOM32A11B5AE04002"; // "INFINITUM37032"//INFINITUM59W1_2.4//INFINITUMD378
 //Structure example to send data
+//MAC Address of the receiver osea de el dispositivo que recibe 
 uint8_t broadcastAddress[] = {0xE0,0x5A,0x1B,0xA1,0x02,0x40};//E0:5A:1B:A1:02:40
 // Insert your SSID  //0x70,0xB8,0xF6,0x5A,0xF1,0x1C  //40:22:D8:04:36:4C
 //0xE0,0x5A,0x1B,0xA1,0x02,0x40
@@ -65,6 +66,10 @@ typedef struct struct_message {
     int readingId;
     float min;
     float max;
+    //------------------------------------------------------------
+    String alr1,alr2,alr3,alr4,alr5,alr6,alr7,alr8;
+    bool  va1,va2,va3,va4,va5,va6,va7,va8;
+    //------------------------------------------------------------
 } struct_message;
 
 //Create a struct_message called myData
@@ -143,6 +148,24 @@ String getReadings () {
   jsonReadings["hum"] = dht.readHumidity();
   jsonReadings["tmin"] = tempMin();
   jsonReadings["tmax"] = tempMax();
+  //---------------------------------------------------------------------------------
+  jsonReadings["alr1"] = alr1;
+  jsonReadings["alr2"] = alr2;
+  jsonReadings["alr3"] = alr3;
+  jsonReadings["alr4"] = alr4;
+  jsonReadings["alr5"] = alr5;
+  jsonReadings["alr6"] = alr6;
+  jsonReadings["alr7"] = alr7;
+  jsonReadings["alr8"] = alr8;
+  jsonReadings["va1"] = !digitalRead(2);
+  jsonReadings["va2"] = !digitalRead(4);
+  jsonReadings["va3"] = !digitalRead(16);
+  jsonReadings["va4"] = !digitalRead(17);
+  jsonReadings["va5"] = !digitalRead(18);
+  jsonReadings["va6"] = !digitalRead(19);
+  jsonReadings["va7"] = !digitalRead(21);
+  jsonReadings["va8"] = !digitalRead(13);
+  //---------------------------------------------------------------------------------
   //La variable se convierten luego en String y se guardan es una variable llamada readings
   serializeJson(jsonReadings,readings);
   Serial.println("Informacion a enviar por la Malla");
@@ -156,8 +179,6 @@ void sendMessage () {
   mesh.sendBroadcast(msg);
   
 }
-
-
 // Needed for painless library 
 //muestra el contenido que es mandado por cada nodo
 //La función imprime el remitente del mensaje (from) y el contenido del mensaje (msg.c_str()).
@@ -176,6 +197,22 @@ void receivedCallback( uint32_t from, String &msg ) {
     hum = myObject["hum"];
     tmin = myObject["tmin"];
     tmax = myObject["tmax"];
+    alr1 = myObject["alr1"].as<String>();
+    alr2 = myObject["alr2"].as<String>();
+    alr3 = myObject["alr3"].as<String>();
+    alr4 = myObject["alr4"].as<String>();
+    alr5 = myObject["alr5"].as<String>();
+    alr6 = myObject["alr6"].as<String>();
+    alr7 = myObject["alr7"].as<String>();
+    alr8 = myObject["alr8"].as<String>();
+    va1 = myObject["va1"];
+    va2 = myObject["va2"];
+    va3 = myObject["va3"];
+    va4 = myObject["va4"];
+    va5 = myObject["va5"];
+    va6 = myObject["va6"];
+    va7 = myObject["va7"];
+    va8 = myObject["va8"];
   } 
     Serial.println("Informacion recivida por la malla:");
     Serial.print("modo: ");
@@ -207,7 +244,22 @@ void receivedCallback( uint32_t from, String &msg ) {
     myData2.readingId = readingId; //readingId++; //-------------------------------------------------------------
     myData2.min = tmin;
     myData2.max = tmax;
-
+    myData2.alr1 = alr1;
+    myData2.alr2 = alr2;
+    myData2.alr3 = alr3;
+    myData2.alr4 = alr4;
+    myData2.alr5 = alr5;
+    myData2.alr6 = alr6;
+    myData2.alr7 = alr7;
+    myData2.alr8 = alr8;
+    myData2.va1 = va1;
+    myData2.va2 = va2;
+    myData2.va3 = va3;
+    myData2.va4 = va4;
+    myData2.va5 = va5;
+    myData2.va6 = va6;
+    myData2.va7 = va7;
+    myData2.va8 = va8;
   //Send message via ESP-NOW al esclavo
     esp_err_t result2 = esp_now_send(broadcastAddress, (uint8_t *) &myData2, sizeof(myData2));
     if (result2 == ESP_OK) {
@@ -317,6 +369,22 @@ void loop() {
       myData.readingId = getWiFiRsi(WIFI_SSID); 
       myData.min = tempMin();
       myData.max = tempMax();
+      myData.alr1 = alr1;
+      myData.alr2 = alr2;
+      myData.alr3 = alr3;
+      myData.alr4 = alr4;
+      myData.alr5 = alr5;
+      myData.alr6 = alr6;
+      myData.alr7 = alr7;
+      myData.alr8 = alr8;
+      myData.va1 = !digitalRead(2);
+      myData.va2 = !digitalRead(4);
+      myData.va3 = !digitalRead(16);
+      myData.va4 = !digitalRead(17);
+      myData.va5 = !digitalRead(18);
+      myData.va6 = !digitalRead(19);
+      myData.va7 = !digitalRead(21);
+      myData.va8 = !digitalRead(13);
       //Send message via ESP-NOW
 
       esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
